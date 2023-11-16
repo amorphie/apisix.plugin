@@ -22,8 +22,12 @@ function _M.access()
             ["Content-Type"] = "application/json",
             ["Your-Custom-Header"] = jsonData.key 
         }
+
+        local pathOnly = ngx.re.match(ngx.var.uri, "^([^?]+)")
+        local path = pathOnly and pathOnly[1] or ""
+
         local requestBody = {
-            url = ngx.var.uri 
+            path = path
         }
 
 
