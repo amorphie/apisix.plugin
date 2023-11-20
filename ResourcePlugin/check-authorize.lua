@@ -1,5 +1,3 @@
-
-
 local base64 = require("base64")
 local cjson = require("cjson")
 
@@ -12,32 +10,47 @@ function _M.access()
 
     if userinfoHeader then
 
-        local decodedData = ngx.decode_base64(userinfoHeader)
+        local decodedData, decodeErr = ngx.decode_base64(userinfoHeader)
 
-        local jsonData = cjson.decode(decodedData)
+        if not decodeErr then
+            local jsonData, parseErr = cjson.decode(decodedData)
 
-        local redirectUri = "/your/redirect/service"
+            if not parseErr then
+                if type(jsonData) == "table" then
+                    ngx.log(ngx.INFO, "Valid x-userinfo payload detected")
 
-        local headers = {
-            ["Content-Type"] = "application/json",
-            ["Your-Custom-Header"] = jsonData.key 
-        }
+                    local redirectUri = ngx.var.upstream_url
 
-        local pathOnly = ngx.re.match(ngx.var.uri, "^([^?]+)")
-        local path = pathOnly and pathOnly[1] or ""
+                    for key, value in pairs(jsonData) do
+                        ngx.req.set_header(key, value)
+                    end
 
-        local requestBody = {
-            path = path
-        }
+                    local pathOnly = ngx.re.match(ngx.var.uri, "^([^?]+)")
+                    local path = pathOnly and pathOnly[1] or ""
 
+                    local requestBody = {
+                        path = path
+                    }
 
-        local res = ngx.location.capture(redirectUri, { method = ngx.HTTP_POST, body = cjson.encode(requestBody), headers = headers })
+                    local res = ngx.location.capture(redirectUri, { method = ngx.HTTP_POST, body = cjson.encode(requestBody) })
 
-        if res.status == 200 then
-            ngx.say("Redirect Service Response: ", res.body)
+                    if res.status == 200 then
+                        ngx.say("Redirect Service Response: ", res.body)
+                    else
+                        ngx.log(ngx.ERR, "Error while making subrequest. Status: ", res.status)
+                        ngx.exit(res.status)
+                    end
+                else
+                    ngx.log(ngx.ERR, "Invalid JSON payload in x-userinfo header. Expected a JSON object.")
+                    ngx.exit(ngx.HTTP_BAD_REQUEST)
+                end
+            else
+                ngx.log(ngx.ERR, "Error decoding JSON payload: ", parseErr)
+                ngx.exit(ngx.HTTP_BAD_REQUEST)
+            end
         else
-            ngx.log(ngx.ERR, "Error while making subrequest. Status: ", res.status)
-            ngx.exit(res.status)
+            ngx.log(ngx.ERR, "Error decoding base64 content: ", decodeErr)
+            ngx.exit(ngx.HTTP_BAD_REQUEST)
         end
     else
         ngx.log(ngx.INFO, "x-userinfo Header not found")
