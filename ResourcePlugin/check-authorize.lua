@@ -1,12 +1,20 @@
 local base64 = require("base64")
 local cjson = require("cjson")
+local ngx =ngx
 
-local _M = {}
+local plugin_name="check-authorize"
+
+local _M = {
+        version = 1.0,
+        priority = 1000,
+        name = plugin_name
+}
 
 function _M.access()
 
     local headers = ngx.req.get_headers()
     local userinfoHeader = headers["x-userinfo"]
+    ngx.log(ngx.ERR, "Plugin Working")
 
     if userinfoHeader then
 
