@@ -1,45 +1,66 @@
 local base64 = require("base64")
 local cjson = require("cjson")
 local ngx =ngx
+local core     = require("apisix.core")
+local io       = require("io")
 
 local plugin_name="check-authorize"
 
+local plugin_schema = {
+    type = "object",
+    properties = {
+        uri = {
+            description = "endpoint",
+            type        = "string",
+            minLength   = 1,
+            maxLength   = 4096,
+        },
+    },
+}
 local _M = {
         version = 1.0,
         priority = 1000,
-        name = plugin_name
+        name = plugin_name,
+        schema   = plugin_schema,
 }
+-- Function to check if the plugin configuration is correct
+function _M.check_schema(conf)
+  -- Validate the configuration against the schema
+  local ok, err = core.schema.check(plugin_schema, conf)
+  -- If validation fails, return false and the error
+  if not ok then
+      return false, err
+  end
+  -- If validation succeeds, return true
+  return true
+end
 
-function _M.access()
+function _M.access(conf)
 
     local headers = ngx.req.get_headers()
     local userinfoHeader = headers["x-userinfo"]
     ngx.log(ngx.ERR, "Plugin Working")
 
     if userinfoHeader then
-
         local decodedData, decodeErr = ngx.decode_base64(userinfoHeader)
-
         if not decodeErr then
             local jsonData, parseErr = cjson.decode(decodedData)
-
             if not parseErr then
                 if type(jsonData) == "table" then
-                    ngx.log(ngx.INFO, "Valid x-userinfo payload detected")
-
-                    local redirectUri = ngx.var.upstream_url
+                    ngx.log(ngx.ERR, "Valid x-userinfo payload detected")
+                    
+                    local redirectUri = conf.uri
 
                     for key, value in pairs(jsonData) do
+                        ngx.log(ngx.ERR, "JSONDATA ", value)
                         ngx.req.set_header(key, value)
                     end
 
-                    local pathOnly = ngx.re.match(ngx.var.uri, "^([^?]+)")
-                    local path = pathOnly and pathOnly[1] or ""
-
                     local requestBody = {
-                        path = path
+                       ngx.var.uri
                     }
-
+                    ngx.log(ngx.ERR, "URL =>  ", conf.uri)
+                    ngx.log(ngx.ERR, "REQUEST BODY =>  ", cjson.encode(requestBody))
                     local res = ngx.location.capture(redirectUri, { method = ngx.HTTP_POST, body = cjson.encode(requestBody) })
 
                     if res.status == 200 then
