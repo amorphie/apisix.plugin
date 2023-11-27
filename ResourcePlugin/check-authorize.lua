@@ -74,14 +74,14 @@ if res then
     -- Cevap kodunu kontrol et
     if res.status == 200 then
         -- Başarılı cevap
-        ngx.log(ngx.ERR,"POST isteği başarıyla tamamlandı. Cevap: ", res.status, " Dönen mesaj: ", res.body)
+        ngx.log(ngx.ERR,"POST request succesfull. Response Code: ", res.status, "Return Message: ", res.body)
     else        
-        ngx.say("POST isteği başarısız. Hata kodu: ", res.status, " Hata mesajı: ", res.body)
+        ngx.say("POST Request unsuccesfull. Error Code: ", res.status, " Error Message: ", res.body)
         ngx.exit(res.status)
     end
 else
     -- İstek hatası
-    ngx.say("POST isteği başarısız. Hata: ", err)
+    ngx.say("POST Request unsuccesfull. Error: ", err)
 end
                 else
                     ngx.log(ngx.ERR, "Invalid JSON payload in x-userinfo header. Expected a JSON object.")
