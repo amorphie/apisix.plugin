@@ -3,13 +3,14 @@ local cjson = require("cjson")
 local ngx =ngx
 local core     = require("apisix.core")
 local io       = require("io")
+local http = require("resty.http")
 
 local plugin_name="check-authorize"
 
 local plugin_schema = {
     type = "object",
     properties = {
-        uri = {
+        endpoint = {
             description = "endpoint",
             type        = "string",
             minLength   = 1,
@@ -48,27 +49,40 @@ function _M.access(conf)
             if not parseErr then
                 if type(jsonData) == "table" then
                     ngx.log(ngx.ERR, "Valid x-userinfo payload detected")
-                    
-                    local redirectUri = conf.uri
-
+                    local headers = {
+                    ["Content-Type"] = "application/json",
+                    }
                     for key, value in pairs(jsonData) do
-                        ngx.log(ngx.ERR, "JSONDATA ", value)
+                        headers[key] = value
                         ngx.req.set_header(key, value)
                     end
 
-                    local requestBody = {
-                       ngx.var.uri
-                    }
-                    ngx.log(ngx.ERR, "URL =>  ", conf.uri)
-                    ngx.log(ngx.ERR, "REQUEST BODY =>  ", cjson.encode(requestBody))
-                    local res = ngx.location.capture(redirectUri, { method = ngx.HTTP_POST, body = cjson.encode(requestBody) })
-
-                    if res.status == 200 then
-                        ngx.say("Redirect Service Response: ", res.body)
-                    else
-                        ngx.log(ngx.ERR, "Error while making subrequest. Status: ", res.status)
-                        ngx.exit(res.status)
-                    end
+                    local requestBody = "/resourcePrivilege/checkAuthorize"
+                    local json_data = cjson.encode({requestBody})
+                    local targetUrl  = conf.endpoint
+                    ngx.log(ngx.ERR, "URL =>  ", conf.endpoint)
+                    ngx.log(ngx.ERR, "***************Headers =>  ", cjson.encode(headers))
+                    ngx.log(ngx.ERR, "***************REQUESTBODY",  cjson.encode(requestBody))
+                    local httpc = http.new()
+                    local res, err = httpc:request_uri(conf.endpoint, {
+                        method = "POST",
+                        body = cjson.encode(requestBody),
+                        headers =headers
+                    })                  
+-- İstek başarılı ise
+if res then
+    -- Cevap kodunu kontrol et
+    if res.status == 200 then
+        -- Başarılı cevap
+        ngx.log(ngx.ERR,"POST isteği başarıyla tamamlandı. Cevap: ", res.status, " Dönen mesaj: ", res.body)
+    else        
+        ngx.say("POST isteği başarısız. Hata kodu: ", res.status, " Hata mesajı: ", res.body)
+        ngx.exit(res.status)
+    end
+else
+    -- İstek hatası
+    ngx.say("POST isteği başarısız. Hata: ", err)
+end
                 else
                     ngx.log(ngx.ERR, "Invalid JSON payload in x-userinfo header. Expected a JSON object.")
                     ngx.exit(ngx.HTTP_BAD_REQUEST)
@@ -83,6 +97,7 @@ function _M.access(conf)
         end
     else
         ngx.log(ngx.INFO, "x-userinfo Header not found")
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 end
 
