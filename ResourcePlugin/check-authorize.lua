@@ -57,12 +57,12 @@ function _M.access(conf)
                         ngx.req.set_header(key, value)
                     end
 
-                    local requestBody = "/resourcePrivilege/checkAuthorize"
+                    local requestBody = ngx.var.uri
                     local json_data = cjson.encode({requestBody})
                     local targetUrl  = conf.endpoint
                     ngx.log(ngx.ERR, "URL =>  ", conf.endpoint)
-                    ngx.log(ngx.ERR, "***************Headers =>  ", cjson.encode(headers))
-                    ngx.log(ngx.ERR, "***************REQUESTBODY",  cjson.encode(requestBody))
+                    ngx.log(ngx.ERR, "***************Headers => ", cjson.encode(headers))
+                    ngx.log(ngx.ERR, "***************REQUESTBODY => ",  cjson.encode(requestBody))
                     local httpc = http.new()
                     local res, err = httpc:request_uri(conf.endpoint, {
                         method = "POST",
