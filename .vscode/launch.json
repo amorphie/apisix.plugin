@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Lua",
+            "type": "lua",
+            "request": "launch",
+            "program": "${workspaceFolder}/check-authorize.lua",
+            "stopOnEntry": false,
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "runtimeVersion": "5.3",
+            "luaExecutable": "lua"
+        }
+    ]
+}
