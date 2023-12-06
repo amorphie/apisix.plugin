@@ -20,7 +20,7 @@ local plugin_schema = {
 }
 local _M = {
         version = 1.0,
-        priority = 1000,
+        priority = 2585,
         name = plugin_name,
         schema   = plugin_schema,
 }
@@ -36,7 +36,7 @@ function _M.check_schema(conf)
   return true
 end
 
-function _M.access(conf)
+function _M.rewrite(conf, ctx)
 
     local headers = ngx.req.get_headers()
     local userinfoHeader = headers["x-userinfo"]
@@ -54,7 +54,7 @@ function _M.access(conf)
                     }
                     for key, value in pairs(jsonData) do
                         headers[key] = value
-                        ngx.req.set_header(key, value)
+                        core.request.set_header(ctx, key, value)
                     end
 
                     local requestBody = ngx.var.uri
@@ -74,10 +74,12 @@ if res then
     -- Cevap kodunu kontrol et
     if res.status == 200 then
         -- Başarılı cevap
-        ngx.log(ngx.ERR,"POST request succesfull. Response Code: ", res.status, "Return Message: ", res.body)
-    else        
-        ngx.say("POST Request unsuccesfull. Error Code: ", res.status, " Error Message: ", res.body)
-        ngx.exit(res.status)
+        ngx.log(ngx.ERR, "POST request successful. Response Code: ", res.status, " Return Message: ", res.body)
+    else
+        ngx.log(ngx.ERR, "POST Request unsuccessful. Error Code: ", res.status, " Error Message: ", res.body)
+        ngx.status = ngx.HTTP_UNAUTHORIZED -- 401 durum kodunu ayarla
+        ngx.say("Unauthorized") -- Opsiyonel: İstek yanıtında bir mesaj gönderebilirsiniz
+        return ngx.exit(ngx.HTTP_UNAUTHORIZED) -- 401 durum koduyla işlemi sonlandır
     end
 else
     -- İstek hatası
