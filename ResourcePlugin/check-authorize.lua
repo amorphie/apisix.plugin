@@ -40,6 +40,7 @@ function _M.rewrite(conf, ctx)
 
     local headers = ngx.req.get_headers()
     local userinfoHeader = headers["x-userinfo"]
+    local req_body_data, err = ngx.req.get_body_data()
     ngx.log(ngx.ERR, "Plugin Working")
 
     if userinfoHeader then
@@ -56,17 +57,18 @@ function _M.rewrite(conf, ctx)
                         headers[key] = value
                         core.request.set_header(ctx, key, value)
                     end
-
-                    local requestBody = ngx.var.uri
-                    local json_data = cjson.encode({requestBody})
+                    local json_data = cjson.encode({
+                        url = ngx.var.uri or "",
+                        data = req_body_data or "",
+                    })
                     local targetUrl  = conf.endpoint
                     ngx.log(ngx.ERR, "URL =>  ", conf.endpoint)
                     ngx.log(ngx.ERR, "***************Headers => ", cjson.encode(headers))
-                    ngx.log(ngx.ERR, "***************REQUESTBODY => ",  cjson.encode(requestBody))
+                    ngx.log(ngx.ERR, "***************REQUESTBODY => ", json_data)
                     local httpc = http.new()
                     local res, err = httpc:request_uri(conf.endpoint, {
                         method = "POST",
-                        body = cjson.encode(requestBody),
+                        body = json_data,
                         headers =headers
                     })                  
 -- İstek başarılı ise
