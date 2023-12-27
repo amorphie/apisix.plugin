@@ -25,8 +25,10 @@ local _M = {
 function _M.body_filter(conf)
     ngx.log(ngx.ERR, "------------------response-code-transformation Plugin Working---------------")
 
+    -- Bu değişken, yanıtın tamamının alındığını belirtir
     local eof = ngx.arg[2]
 
+    -- Eğer eof true ise, bu son paket demektir
     if eof then
         local status_code = ngx.status
         local headers = ngx.resp.get_headers()
@@ -38,6 +40,10 @@ function _M.body_filter(conf)
         })
 
         local targetUrl = conf.endpoint
+        ngx.log(ngx.ERR, "URL =>  ", conf.endpoint)
+        ngx.log(ngx.ERR, "response-code-transformation---***************Headers => ", cjson.encode(headers))
+        ngx.log(ngx.ERR, "response-code-transformation---***************REQUESTBODY => ", requestBody)
+
         local httpc = http.new()
         local res, err = httpc:request_uri(targetUrl, {
             method = "POST",
@@ -46,11 +52,7 @@ function _M.body_filter(conf)
         })
 
         -- Handle the response as needed
-
-        -- Değiştirilmiş yanıtı son kullanıcıya gönderme
         ngx.arg[1] = res.body
-
-        -- Yanıtın gönderildiğini işaretleme
         ngx.eof()
     end
 end
