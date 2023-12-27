@@ -61,17 +61,18 @@ function _M.rewrite(conf, ctx)
                         url = ngx.var.uri or "",
                         data = req_body_data or "",
                     })
+                            -- ngx.req.get_uri_args() ile sorgu parametrelerini al
+                    local args = ngx.req.get_uri_args()
+                    for key, value in pairs(args) do
+                        headers[key] = value
+                    end
                     local targetUrl  = conf.endpoint
-                    ngx.log(ngx.ERR, "URL =>  ", conf.endpoint)
-                    ngx.log(ngx.ERR, "***************Headers => ", cjson.encode(headers))
-                    ngx.log(ngx.ERR, "***************REQUESTBODY => ", json_data)
                     local httpc = http.new()
                     local res, err = httpc:request_uri(conf.endpoint, {
                         method = "POST",
                         body = json_data,
                         headers =headers
                     })                  
--- İstek başarılı ise
 if res then
     -- Cevap kodunu kontrol et
     if res.status == 200 then
@@ -84,7 +85,6 @@ if res then
         return ngx.exit(ngx.HTTP_UNAUTHORIZED) -- 401 durum koduyla işlemi sonlandır
     end
 else
-    -- İstek hatası
     ngx.say("POST Request unsuccesfull. Error: ", err)
 end
                 else
