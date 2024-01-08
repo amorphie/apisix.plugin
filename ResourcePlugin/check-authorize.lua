@@ -40,16 +40,14 @@ function _M.rewrite(conf, ctx)
 
     local headers = ngx.req.get_headers()
     local userinfoHeader = headers["x-userinfo"]
+    ngx.req.read_body()   
     local req_body_data, err = ngx.req.get_body_data()
-    ngx.log(ngx.ERR, "Plugin Working")
-
     if userinfoHeader then
         local decodedData, decodeErr = ngx.decode_base64(userinfoHeader)
         if not decodeErr then
             local jsonData, parseErr = cjson.decode(decodedData)
             if not parseErr then
                 if type(jsonData) == "table" then
-                    ngx.log(ngx.ERR, "Valid x-userinfo payload detected")
                     local headers = {
                     ["Content-Type"] = "application/json",
                     }
@@ -57,6 +55,7 @@ function _M.rewrite(conf, ctx)
                         headers[key] = value
                         core.request.set_header(ctx, key, value)
                     end
+                    ngx.log(ngx.ERR, req_body_data)
                     local json_data = cjson.encode({
                         url = ngx.var.uri or "",
                         data = req_body_data or "",
@@ -73,6 +72,7 @@ function _M.rewrite(conf, ctx)
                         body = json_data,
                         headers =headers
                     })                  
+-- İstek başarılı ise
 if res then
     -- Cevap kodunu kontrol et
     if res.status == 200 then
@@ -85,6 +85,7 @@ if res then
         return ngx.exit(ngx.HTTP_UNAUTHORIZED) -- 401 durum koduyla işlemi sonlandır
     end
 else
+    -- İstek hatası
     ngx.say("POST Request unsuccesfull. Error: ", err)
 end
                 else
@@ -101,7 +102,6 @@ end
         end
     else
         ngx.log(ngx.INFO, "x-userinfo Header not found")
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 end
 
